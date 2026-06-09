@@ -1,0 +1,28 @@
+[game]
+hostname = "👽 МЁРТВЫЙ КОСМОС 🚀 Goob [MRP]"
+desc = "Мёртвый Космос Goob — русскоязычный сервер Space Station 14.\n• На сервере используется сборка GoobStation.\n• Средние требования к RP.\n• Сообщество: https://discord.gg/ds14\n• Вики: https://wiki.deadspace14.net/"
+maxplayers = 180
+soft_max_players = 80
+map_rotation = true
+
+[thunderdome]
+enabled = false
+
+[server]
+lobby_name = "👽 МЁРТВЫЙ КОСМОС 🚀 Goob [MRP]"
+
+[game.panic_bunker]
+enabled = false
+show_reason = true
+min_account_age = 0
+min_overall_minutes = 0
+deny_vpn = false
+enable_without_admins = true
+disable_with_admins = false
+
+[rules]
+time = 30.0
+
+[hub]
+advertise = true
+tags = "lang:ru,rp:med,region:eu_e"

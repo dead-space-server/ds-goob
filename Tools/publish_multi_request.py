@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2024 Pieter-Jan Briers <pieterjan.briers+git@gmail.com>
+# SPDX-FileCopyrightText: 2024 Piras314 <p1r4s@proton.me>
+# SPDX-FileCopyrightText: 2025 Aiden <28298836+Aidenkrz@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2025 Aiden <aiden@djkraz.com>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+import argparse
+import os
+import time
+import xml.etree.ElementTree as ET
+from typing import Iterable
+
+import requests
+
+PUBLISH_TOKEN = os.environ["PUBLISH_TOKEN"]
+VERSION = os.environ.get("PUBLISH_VERSION") or os.environ["GITHUB_SHA"]
+
+RELEASE_DIR = "release"
+PROGRESS_INTERVAL_SECONDS = 60
+
+ROBUST_CDN_URL = "https://cdn.deadspace14.net/"
+DEFAULT_FORK_ID = os.environ.get("FORK_ID") or "dsgoob"
+
+
+class ProgressFileReader:
+    def __init__(self, file, file_name: str, total_bytes: int):
+        self._file = file
+        self._file_name = file_name
+        self._total_bytes = total_bytes
+        self._bytes_read = 0
+        self._last_log_at = time.monotonic()
+
+    @property
+    def bytes_read(self) -> int:
+        return self._bytes_read
+
+    def __len__(self) -> int:
+        return self._total_bytes
+
+    def tell(self) -> int:
+        return self._file.tell()
+
+    def read(self, size=-1):
+        chunk = self._file.read(size)
+        if not chunk:
+            return chunk
+
+        self._bytes_read += len(chunk)
+        now = time.monotonic()
+        if now - self._last_log_at >= PROGRESS_INTERVAL_SECONDS:
+            self._last_log_at = now
+            sent_mb = self._bytes_read / 1024 / 1024
+            total_mb = self._total_bytes / 1024 / 1024
+            percent = self._bytes_read / self._total_bytes * 100 if self._total_bytes else 100
+            print(f"    Uploading {self._file_name}: {sent_mb:.1f}/{total_mb:.1f} MB ({percent:.1f}%)")
+
+        return chunk
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fork-id", default=DEFAULT_FORK_ID)
+    args = parser.parse_args()
+
+    session = requests.Session()
+    session.headers = {
+        "Authorization": f"Bearer {PUBLISH_TOKEN}",
+    }
+
+    engine_version = get_engine_version()
+    print(f"Version: {VERSION}")
+    print(f"Engine version: {engine_version}")
+    print(f"Fork: {args.fork_id}")
+    print(f"CDN: {ROBUST_CDN_URL}")
+
+    publish_id: str | None = None
+
+    def abort_publish():
+        if not publish_id:
+            return
+
+        try:
+            print(f"Aborting publish id {publish_id}...")
+            session.post(
+                f"{ROBUST_CDN_URL}fork/{args.fork_id}/publish/abort",
+                json={"version": VERSION},
+                headers={"Content-Type": "application/json", "Robust-Cdn-Publish-Id": publish_id},
+                timeout=30)
+        except Exception as e:
+            print(f"Abort publish failed: {e}")
+
+    data = {
+        "version": VERSION,
+        "engineVersion": engine_version,
+    }
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    print("Starting publish...")
+    resp = session.post(f"{ROBUST_CDN_URL}fork/{args.fork_id}/publish/start", json=data, headers=headers)
+    if not resp.ok:
+        print(f"Publish start FAILED: {resp.status_code} {resp.reason}")
+        print(f"Response: {resp.text}")
+        resp.raise_for_status()
+
+    publish_id = resp.headers.get("Robust-Cdn-Publish-Id")
+    if not publish_id:
+        raise RuntimeError("CDN did not return Robust-Cdn-Publish-Id")
+
+    print("Publish started OK, uploading files...")
+    files = list(get_files_to_publish())
+    print(f"Files to upload: {len(files)}")
+    if not files:
+        abort_publish()
+        raise RuntimeError("No files found to publish")
+
+    for file in files:
+        try:
+            resp = upload_file(session, args.fork_id, publish_id, file)
+        except Exception:
+            abort_publish()
+            raise
+
+        if not resp.ok:
+            print(f"  Upload FAILED: {resp.status_code} {resp.reason}")
+            print(f"  Response: {resp.text}")
+            abort_publish()
+            resp.raise_for_status()
+
+    print("All files uploaded, finishing publish...")
+    headers = {
+        "Content-Type": "application/json",
+        "Robust-Cdn-Publish-Id": publish_id
+    }
+
+    try:
+        resp = session.post(f"{ROBUST_CDN_URL}fork/{args.fork_id}/publish/finish", json={"version": VERSION}, headers=headers)
+    except Exception:
+        abort_publish()
+        raise
+
+    if not resp.ok:
+        print(f"Publish finish FAILED: {resp.status_code} {resp.reason}")
+        print(f"Response: {resp.text}")
+        abort_publish()
+        resp.raise_for_status()
+
+    print("SUCCESS!")
+
+
+def upload_file(session: requests.Session, fork_id: str, publish_id: str, file: str) -> requests.Response:
+    size_bytes = os.path.getsize(file)
+    file_name = os.path.basename(file)
+    size_mb = size_bytes / 1024 / 1024
+    print(f"  Uploading {file_name} ({size_mb:.1f} MB)")
+
+    with open(file, "rb") as f:
+        body = ProgressFileReader(f, file_name, size_bytes)
+        headers = {
+            "Content-Type": "application/octet-stream",
+            "Robust-Cdn-Publish-File": file_name,
+            "Robust-Cdn-Publish-Version": VERSION,
+            "Robust-Cdn-Publish-Id": publish_id
+        }
+        try:
+            resp = session.post(f"{ROBUST_CDN_URL}fork/{fork_id}/publish/file", data=body, headers=headers)
+        except requests.RequestException:
+            sent_mb = body.bytes_read / 1024 / 1024
+            print(f"  Upload exception for {file_name}; sent {sent_mb:.1f}/{size_mb:.1f} MB")
+            raise
+
+    print(f"  Upload finished {file_name}: {resp.status_code} {resp.reason}")
+    return resp
+
+
+def get_files_to_publish() -> Iterable[str]:
+    for file in os.listdir(RELEASE_DIR):
+        yield os.path.join(RELEASE_DIR, file)
+
+
+def get_engine_version() -> str:
+    tree = ET.parse(os.path.join("RobustToolbox", "MSBuild", "Robust.Engine.Version.props"))
+    version = tree.getroot().find(".//Version").text
+    if not version:
+        raise RuntimeError("Unable to read Robust engine version")
+    return version.strip()
+
+
+if __name__ == '__main__':
+    main()

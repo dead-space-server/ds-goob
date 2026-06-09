@@ -1,0 +1,54 @@
+[net]
+tickrate = 30
+
+[netres]
+limit = 25.0
+
+[infolinks]
+discord = "https://discord.gg/ds14"
+github = ""
+wiki = "https://wiki.deadspace14.net/"
+patreon = ""
+appeal = "https://discord.gg/ds14"
+bug_report = "https://discord.gg/ds14"
+website = "https://deadspace14.net/"
+
+[viewport]
+maximum_width = 26
+
+[game]
+lobbyduration = 240
+map_pool = "CorvaxMapPool"
+round_restart_time = 180
+fallbackpreset = "secret"
+defaultpreset = "secret"
+ipintel_enabled = false
+
+[events]
+enabled = true
+
+[server]
+rules_file = "DefaultRuleset"
+
+[discord]
+rich_main_icon_id = "deadspace"
+
+[admin]
+see_own_notes = true
+admins_count_in_playercount = true
+
+[contraband]
+icons_enabled = true
+
+[misc]
+space_whale_spawn = false
+
+[tts]
+enabled = false
+api_url = ""
+
+[queue]
+patreon_skip = false
+
+[patron]
+ask_support = -1

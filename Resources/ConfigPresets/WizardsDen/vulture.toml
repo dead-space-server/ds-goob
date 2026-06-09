@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2023 Chief-Engineer <119664036+Chief-Engineer@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2023 Pieter-Jan Briers <pieterjan.briers+git@gmail.com>
+# SPDX-FileCopyrightText: 2025 Aiden <28298836+Aidenkrz@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2025 Errant <35878406+Errant-4@users.noreply.github.com>
+# SPDX-FileCopyrightText: 2025 slarticodefast <161409025+slarticodefast@users.noreply.github.com>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Configuration preset used on Wizard's Den Leviathan
+
+[game]
+hostname = "👽 МЁРТВЫЙ КОСМОС 🚀 Goob [MRP]"
+
+[hub]
+tags = "lang:ru,rp:med,region:eu_e"
+
+[server]
+# This needs to be specified even though it's identical to the hostname, because fallback lobby name is "Lobby <hostname>" which would be too long and go out of bounds
+lobby_name = "👽 МЁРТВЫЙ КОСМОС 🚀 Goob [MRP]"
+force_client_hud_version_watermark = true
+
+[chat]
+motd = "\n########################################################\n\n[font size=17]Тестовый сервер Мёртвый Космос Goob. Изменения могут быть нестабильными и могут быть отменены. Сообщайте о проблемах в Discord: https://discord.gg/ds14[/font]\n\n########################################################\n"

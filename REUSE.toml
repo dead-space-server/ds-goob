@@ -1,0 +1,16 @@
+version = 1
+SPDX-PackageName = "Dead Space Goob"
+SPDX-PackageSupplier = "Dead Space Server <deadspace14.contact@gmail.com>"
+SPDX-PackageDownloadLocation = "NOASSERTION"
+
+[[annotations]]
+path = ["Resources/Audio/**", "Resources/Textures/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "None"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["**.txt", "**.json"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "None"
+SPDX-License-Identifier = "MIT"
